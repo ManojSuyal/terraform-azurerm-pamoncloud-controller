@@ -1,15 +1,15 @@
-variable "subnet_name" {
-  description = "Name of the existing subnet"
+variable "resource_group_location" {
+  description = "Location of the existing Resource Group"
   type        = string
 }
 
-variable "vnet_name" {
-  description = "Name of the existing Virtual Network"
+variable "subnet_id" {
+  description = "ID of the existing subnet"
   type        = string
 }
 
-variable "identity_name" {
-  description = "Name of the existing User Assigned Managed Identity"
+variable "identity_id" {
+  description = "ID of the existing User Assigned Managed Identity"
   type        = string
 }
 

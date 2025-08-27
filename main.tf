@@ -1,49 +1,27 @@
 
-
 #### Set provider
 provider "azurerm" {
   features {}
 }
 
-
-# Reference existing Resource Group
-data "azurerm_resource_group" "controller_rg" {
-  name = var.resource_group_name
-}
-
-# Reference existing Subnet
-data "azurerm_subnet" "controller_subnet" {
-  name                 = var.subnet_name
-  virtual_network_name = var.vnet_name
-  resource_group_name  = var.resource_group_name
-}
-
-
-# Reference existing User Assigned Managed Identity
-data "azurerm_user_assigned_identity" "controller_identity" {
-  name                = var.identity_name
-  resource_group_name = var.resource_group_name
-}
-
-
 #### Create VM resources
 
 resource "azurerm_public_ip" "controller_public_ip" {
   name                = "PAMonCloud-BYOI-Controller-Public-IP"
-  resource_group_name = data.azurerm_resource_group.controller_rg.name
-  location            = data.azurerm_resource_group.controller_rg.location
+  resource_group_name = var.resource_group_name
+  location            = var.resource_group_location
   allocation_method   = "Static"
 }
 
 
 resource "azurerm_network_interface" "controller_network_interface" {
   name                = "Controller-Network-Interface"
-  location            = data.azurerm_resource_group.controller_rg.location
-  resource_group_name = data.azurerm_resource_group.controller_rg.name
+  location            = var.resource_group_location
+  resource_group_name = var.resource_group_name
 
   ip_configuration {
     name                          = "ipconfig1"
-    subnet_id                     = data.azurerm_subnet.controller_subnet.id
+    subnet_id                     = var.subnet_id
     private_ip_address_allocation = "Dynamic"
     public_ip_address_id          = azurerm_public_ip.controller_public_ip.id
   }
@@ -67,15 +45,16 @@ resource "local_file" "controller_vm_private_key" {
 
 resource "azurerm_virtual_machine" "controller_vm" {
   name                          = "PAMonCloudController"
-  location                      = data.azurerm_resource_group.controller_rg.location
-  resource_group_name           = data.azurerm_resource_group.controller_rg.name
+  location                      = var.resource_group_location
+  resource_group_name           = var.resource_group_name
   network_interface_ids         = [azurerm_network_interface.controller_network_interface.id]
   vm_size                       = var.vm_size
   delete_os_disk_on_termination = true
 
   identity {
     type         = "UserAssigned"
-    identity_ids = [data.azurerm_user_assigned_identity.controller_identity.id]
+    identity_ids = [var.identity_id]
+
   }
 
   storage_image_reference {
