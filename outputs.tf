@@ -1,5 +1,5 @@
 output "rg_name" {
-  value = resource.azurerm_resource_group.controller_rg.name
+  value = data.azurerm_resource_group.controller_rg.name
 }
 
 output "vm_name" {

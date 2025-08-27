@@ -1,92 +1,54 @@
-locals {
-  role_assignment_scope = split("/resourceGroups/", azurerm_resource_group.controller_rg.id)[0]
-}
+
 
 #### Set provider
 provider "azurerm" {
   features {}
 }
 
-#### Create RG and related objects
-resource "azurerm_resource_group" "controller_rg" {
-  name     = var.resource_group_name
-  location = var.location
+
+# Reference existing Resource Group
+data "azurerm_resource_group" "controller_rg" {
+  name = var.resource_group_name
 }
 
-resource "azurerm_network_security_group" "controller_nsg" {
-  name                = "PAMonCloud-BYOI-Controller-NSG"
-  location            = var.location
-  resource_group_name = azurerm_resource_group.controller_rg.name
-
-  security_rule {
-    name                       = "InboundSSH"
-    priority                   = 100
-    direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_port_range          = "*"
-    destination_port_range     = "22"
-    source_address_prefix      = var.allowed_ssh_cidr
-    destination_address_prefix = "*"
-  }
-
-  depends_on = [azurerm_resource_group.controller_rg]
+# Reference existing Subnet
+data "azurerm_subnet" "controller_subnet" {
+  name                 = var.subnet_name
+  virtual_network_name = var.vnet_name
+  resource_group_name  = var.resource_group_name
 }
 
-resource "azurerm_virtual_network" "controller_vnet" {
-  name                = "PAMonCloud-BYOI-Controller-VNet"
-  location            = azurerm_resource_group.controller_rg.location
-  resource_group_name = azurerm_resource_group.controller_rg.name
-  address_space       = [var.vnet_cidr]
 
-  subnet {
-    name           = "Controller-Subnet"
-    address_prefix = var.subnet_cidr
-    security_group = azurerm_network_security_group.controller_nsg.id
-  }
-
-  tags = {
-    Name = "PAMonCloud-BYOI-Controller-VNet"
-  }
+# Reference existing User Assigned Managed Identity
+data "azurerm_user_assigned_identity" "controller_identity" {
+  name                = var.identity_name
+  resource_group_name = var.resource_group_name
 }
 
-#### Create user-assigned managed identity
-resource "azurerm_user_assigned_identity" "controller_identity" {
-  name                = "Controller-Identity"
-  resource_group_name = azurerm_resource_group.controller_rg.name
-  location            = azurerm_resource_group.controller_rg.location
-}
-
-#### Create role assignment
-resource "azurerm_role_assignment" "storage_account_role_assignment" {
-  scope                = local.role_assignment_scope
-  role_definition_name = "Contributor"
-  principal_id         = azurerm_user_assigned_identity.controller_identity.principal_id
-
-  depends_on = [resource.azurerm_user_assigned_identity.controller_identity]
-}
 
 #### Create VM resources
+
 resource "azurerm_public_ip" "controller_public_ip" {
   name                = "PAMonCloud-BYOI-Controller-Public-IP"
-  resource_group_name = azurerm_resource_group.controller_rg.name
-  location            = azurerm_resource_group.controller_rg.location
+  resource_group_name = data.azurerm_resource_group.controller_rg.name
+  location            = data.azurerm_resource_group.controller_rg.location
   allocation_method   = "Static"
 }
 
+
 resource "azurerm_network_interface" "controller_network_interface" {
   name                = "Controller-Network-Interface"
-  location            = var.location
-  resource_group_name = azurerm_resource_group.controller_rg.name
+  location            = data.azurerm_resource_group.controller_rg.location
+  resource_group_name = data.azurerm_resource_group.controller_rg.name
 
   ip_configuration {
     name                          = "ipconfig1"
-    subnet_id                     = (resource.azurerm_virtual_network.controller_vnet.subnet[*].id)[0]
+    subnet_id                     = data.azurerm_subnet.controller_subnet.id
     private_ip_address_allocation = "Dynamic"
     public_ip_address_id          = azurerm_public_ip.controller_public_ip.id
   }
 
-  depends_on = [resource.azurerm_public_ip.controller_public_ip]
+  depends_on = [azurerm_public_ip.controller_public_ip]
 }
 
 # Generate SSH key pair for VM authentication
@@ -102,17 +64,18 @@ resource "local_file" "controller_vm_private_key" {
   file_permission = "0600"
 }
 
+
 resource "azurerm_virtual_machine" "controller_vm" {
   name                          = "PAMonCloudController"
-  location                      = var.location
-  resource_group_name           = azurerm_resource_group.controller_rg.name
+  location                      = data.azurerm_resource_group.controller_rg.location
+  resource_group_name           = data.azurerm_resource_group.controller_rg.name
   network_interface_ids         = [azurerm_network_interface.controller_network_interface.id]
   vm_size                       = var.vm_size
   delete_os_disk_on_termination = true
 
   identity {
     type         = "UserAssigned"
-    identity_ids = [azurerm_user_assigned_identity.controller_identity.id]
+    identity_ids = [data.azurerm_user_assigned_identity.controller_identity.id]
   }
 
   storage_image_reference {
@@ -154,6 +117,4 @@ resource "azurerm_virtual_machine" "controller_vm" {
   tags = {
     Name = "PAMonCloud-BYOI-Controller"
   }
-
-  depends_on = [resource.azurerm_role_assignment.storage_account_role_assignment]
 }

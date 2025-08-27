@@ -1,7 +1,21 @@
+variable "subnet_name" {
+  description = "Name of the existing subnet"
+  type        = string
+}
+
+variable "vnet_name" {
+  description = "Name of the existing Virtual Network"
+  type        = string
+}
+
+variable "identity_name" {
+  description = "Name of the existing User Assigned Managed Identity"
+  type        = string
+}
+
 variable "resource_group_name" {
   description = "The name of the controller's RG"
   type        = string
-  default     = "PAMonCloud-BYOI-Controller-RG"
   validation {
     condition     = can(regex("^[a-zA-Z][a-zA-Z0-9-_.()]{1,89}$", var.resource_group_name))
     error_message = <<-EOF
@@ -11,30 +25,6 @@ variable "resource_group_name" {
         - Contain only alphanumeric characters, underscores (_), hyphens (-), or parentheses (()).
     EOF
   }
-}
-
-variable "location" {
-  description = "Location for deployment"
-  type        = string
-  default     = "westeurope"
-}
-
-variable "vnet_cidr" {
-  description = "VNET CIDR block"
-  type        = string
-  default     = "10.0.0.0/16"
-}
-
-variable "subnet_cidr" {
-  description = "Subnet CIDR block"
-  type        = string
-  default     = "10.0.1.0/24"
-}
-
-variable "allowed_ssh_cidr" {
-  description = "CIDR block allowed for SSH inbound access"
-  type        = string
-  default     = "0.0.0.0/0" # Change CIDR scope for better security
 }
 
 variable "vm_admin_user" {

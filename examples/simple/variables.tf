@@ -1,7 +1,31 @@
-variable "allowed_ssh_cidr" {
-  description = "CIDR block allowed for SSH inbound access"
+
+variable "subnet_name" {
+  description = "Name of the existing subnet"
   type        = string
-  default     = "0.0.0.0/0" # Change CIDR scope for better security
+}
+
+variable "vnet_name" {
+  description = "Name of the existing Virtual Network"
+  type        = string
+}
+
+variable "identity_name" {
+  description = "Name of the existing User Assigned Managed Identity"
+  type        = string
+}
+
+variable "resource_group_name" {
+  description = "The name of the controller's RG"
+  type        = string
+  validation {
+    condition     = can(regex("^[a-zA-Z][a-zA-Z0-9-_.()]{1,89}$", var.resource_group_name))
+    error_message = <<-EOF
+      The resource group name must meet the following requirements:
+        - Be between 1 and 90 characters long.
+        - Start with a letter
+        - Contain only alphanumeric characters, underscores (_), hyphens (-), or parentheses (()).
+    EOF
+  }
 }
 
 variable "storage_account_id" {
