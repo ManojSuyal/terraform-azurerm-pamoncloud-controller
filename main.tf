@@ -15,7 +15,7 @@ data "azurerm_resource_group" "controller_rg" {
 data "azurerm_subnet" "controller_subnet" {
   name                 = var.subnet_name
   virtual_network_name = var.vnet_name
-  resource_group_name  = var.resource_group_name
+  resource_group_name  = var.vnet_resource_group_name
 }
 
 

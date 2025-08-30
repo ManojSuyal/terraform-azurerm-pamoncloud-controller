@@ -13,6 +13,11 @@ variable "identity_name" {
   type        = string
 }
 
+variable "vnet_resource_group_name" {
+  description = "The name of the controller's RG"
+  type        = string
+}
+
 variable "resource_group_name" {
   description = "The name of the controller's RG"
   type        = string
